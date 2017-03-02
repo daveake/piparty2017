@@ -1,15 +1,7 @@
-import socket, json, crcmod, serial
-from gpiozero import OutputDevice
+import socket, json, crcmod, time
+from lora import *
 
-enable_pin = OutputDevice(17)
-enable_pin.on()
-
-rtty_serial = serial.Serial()
-rtty_serial.port = '/dev/ttyAMA0'
-rtty_serial.baudrate = 50
-rtty_serial.stopbits = 2
-rtty_serial.bytesize = 7
-rtty_serial.open()
+mylora = LoRa(Channel=0, Frequency=434.450, Mode=1)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 s.connect(('localhost', 6005))                               		
@@ -29,7 +21,8 @@ while True:
 				values = ['PIPARTY', SentenceCount, position['time'],
 						  '{:.5f}'.format(position['lat']),
 						  '{:.5f}'.format(position['lon']),
-						  int(position['alt'])]
+						  int(position['alt']),
+						  int(position['sats'])]
 						  
 				temp = ','.join(map(str, values))
 				
@@ -39,4 +32,6 @@ while True:
 				sentence = '$$' + temp + '*' + crc_string + '\n'
 
 				print(sentence)
-				rtty_serial.write(sentence.encode())
+				mylora.send_text(sentence)
+				while mylora.is_sending():
+					time.sleep(0.1)
